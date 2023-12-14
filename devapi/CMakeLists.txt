@@ -39,8 +39,9 @@ add_library(devapi STATIC
   crud.cc
   ${HEADERS}
 )
+add_subdirectory(abe)
 
-target_link_libraries(devapi PUBLIC common)
+target_link_libraries(devapi PUBLIC common abe)
 
 add_coverage(devapi)
 
