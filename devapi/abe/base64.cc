@@ -1,9 +1,15 @@
 #include "mysqlx/abe/base64.h"
 #include <stddef.h>
 #include <iostream>
+
+namespace mysqlx{
+namespace abe{
+namespace base64_utils {
+
 typedef unsigned int uint32;
 #define BASE64_ERROR(msg) std::cerr << "base64 error: " << (msg) << std::endl;
-unsigned base64_utils::b64_encode(const char* src, unsigned len, char* dst)
+
+unsigned b64_encode(const char* src, unsigned len, char* dst)
 {
     char *p = NULL;
     const char *s = NULL, *end = src + len;
@@ -39,7 +45,7 @@ unsigned base64_utils::b64_encode(const char* src, unsigned len, char* dst)
     return p - dst;
 }
 
-unsigned base64_utils::b64_decode(const char* src, unsigned len, char* dst)
+unsigned b64_decode(const char* src, unsigned len, char* dst)
 {
     const char *srcend = src + len, *s = src;
     char* p = dst;
@@ -92,12 +98,16 @@ unsigned base64_utils::b64_decode(const char* src, unsigned len, char* dst)
     return p - dst;
 }
 
-unsigned base64_utils::b64_enc_len(unsigned srclen)
+unsigned b64_enc_len(unsigned srclen)
 {
     return (srclen + 2) / 3 * 4;
 }
 
-unsigned base64_utils::b64_dec_len(unsigned srclen)
+unsigned b64_dec_len(unsigned srclen)
 {
     return srclen / 4 * 3;
 }
+
+}
+}//namespace mysqlx::abe
+}//namespace mysqlx

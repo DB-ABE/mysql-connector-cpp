@@ -2,6 +2,8 @@
 #include <cassert>
 #include <iostream>
 #include <unistd.h>
+#include <openabe/openabe.h>
+#include <openabe/zsymcrypto.h>
 #include <openssl/sha.h>
 #include <openssl/rsa.h>
 #include <openssl/err.h>
@@ -10,34 +12,36 @@
 #include "mysqlx/abe/abe_crypto.h"
 #include "mysqlx/abe/base64.h"
 
+namespace mysqlx{
+namespace abe{
 
-bool abe_crypto::encrypt(string pt, string policy, string &ct){
+bool abe_crypto::encrypt(std::string pt, std::string policy, std::string &ct){
   
-  InitializeOpenABE();
-  OpenABECryptoContext cpabe("CP-ABE");
+  oabe::InitializeOpenABE();
+  oabe::OpenABECryptoContext cpabe("CP-ABE");
   cpabe.importPublicParams(mpk);
   cpabe.encrypt(policy.c_str(), pt, ct);
-  ShutdownOpenABE();
+  oabe::ShutdownOpenABE();
   
 //   std::cout<<"encrypt succefully!"<<std::endl;
   return true;
 }
 
-bool abe_crypto::decrypt(string ct, string &pt){
+bool abe_crypto::decrypt(std::string ct, std::string &pt){
   
   if(!check_abe_key()){
     return false;
   }
 
-  InitializeOpenABE();
-  OpenABECryptoContext cpabe("CP-ABE");
+  oabe::InitializeOpenABE();
+  oabe::OpenABECryptoContext cpabe("CP-ABE");
   cpabe.importPublicParams(mpk);
   cpabe.importUserKey(user.user_id.c_str(), user.user_key);
   if(!cpabe.decrypt(user.user_id.c_str(), ct, pt)){
     pt = "can't decrypt.";
   }
 //   std::cout << "Recovered message: " << pt << std::endl;
-  ShutdownOpenABE();
+  oabe::ShutdownOpenABE();
   
   return true;
 }
@@ -51,9 +55,9 @@ bool abe_crypto::check_abe_key(){
 }
 
 
-bool abe_crypto::init(string mpk_path, string key_path, 
-                        string kms_cert_path, string db_cert_path,
-                        string rsa_sk_path){
+bool abe_crypto::init(std::string mpk_path, std::string key_path, 
+                        std::string kms_cert_path, std::string db_cert_path,
+                        std::string rsa_sk_path){
     if(!(import_mpk(mpk_path) 
         && import_db_cert(db_cert_path) && import_kms_cert(kms_cert_path)
         && import_sk(rsa_sk_path))){
@@ -65,7 +69,7 @@ bool abe_crypto::init(string mpk_path, string key_path,
     return true;
 }
 
-bool abe_crypto::import_mpk(string mpk_path){
+bool abe_crypto::import_mpk(std::string mpk_path){
     //读入mpk
     std::ifstream ifs_mpk(mpk_path, std::ios::in);
     if(!ifs_mpk){
@@ -77,7 +81,7 @@ bool abe_crypto::import_mpk(string mpk_path){
     return true;
 }
 
-bool abe_crypto::import_user_key(string key_path){
+bool abe_crypto::import_user_key(std::string key_path){
     //读入abe_user_key
     std::ifstream ifs_key(key_path, std::ios::in);
     if(!ifs_key){
@@ -89,8 +93,8 @@ bool abe_crypto::import_user_key(string key_path){
     return true;
 }
 
-bool abe_crypto::save_user_key(string key_path, string key_str_b64){
-    string pt;
+bool abe_crypto::save_user_key(std::string key_path, std::string key_str_b64){
+    std::string pt;
 
     //key_str为base64编码
     size_t key_str_b64_length = key_str_b64.length();
@@ -98,7 +102,7 @@ bool abe_crypto::save_user_key(string key_path, string key_str_b64){
     size_t key_str_length = base64_utils::b64_decode(key_str_b64.c_str(), key_str_b64_length, (char*)key_str);
     // base64_utils::b64_decode(key_str_b64.c_str(), key_str_b64_length, (char*)key_str);
 
-    string ct(key_str,key_str_length);
+    std::string ct(key_str,key_str_length);
     if(!rsa_decrypt(ct, pt)){
         free(key_str);
         ABE_ERROR("failed to decrypt abe user key");
@@ -106,12 +110,10 @@ bool abe_crypto::save_user_key(string key_path, string key_str_b64){
     }
     free(key_str);
 
-    if(user.user_key != ""){
-        string decide = "";
-        std::cout << "You already have abe key, do you want to update it?(Y/n)";
-        if(!std::getline(std::cin, decide) || (decide != "y" && decide != "Y" && decide != "")){
-            return false;
-        }
+    if(pt == ""){
+        //todo: 后续可以考虑增加一个参数决定每次启动是否更新abe_key
+        //或者提供一个函数让程序员自行决定是否更新
+        return false;
     }
     //写入abe_user_key
     std::ofstream ofs_key(key_path, std::ios::out);
@@ -125,7 +127,7 @@ bool abe_crypto::save_user_key(string key_path, string key_str_b64){
     return true;
 }
 
-bool abe_crypto::import_sk(string rsa_sk_path){
+bool abe_crypto::import_sk(std::string rsa_sk_path){
     // 导入rsa密钥文件并读取密钥
     FILE *hPriKeyFile = fopen(rsa_sk_path.c_str(), "rb");
     if (hPriKeyFile == NULL)
@@ -147,7 +149,7 @@ bool abe_crypto::import_sk(string rsa_sk_path){
     return true;
 }
 
-RSA * abe_crypto::import_pk(const string cert_path, string &err_msg){
+RSA * abe_crypto::import_pk(const std::string cert_path, std::string &err_msg){
     RSA * pk;
     // 导入证书文件并读取公钥
     FILE *hPubKeyFile = fopen(cert_path.c_str(), "rb");
@@ -183,8 +185,8 @@ RSA * abe_crypto::import_pk(const string cert_path, string &err_msg){
     return pk;
 }
 
-bool abe_crypto::import_db_cert(string db_cert_path){
-    string err_msg;
+bool abe_crypto::import_db_cert(std::string db_cert_path){
+    std::string err_msg;
     RSA *pk = import_pk(db_cert_path, err_msg);
     if(pk == NULL){
         err_msg += ":" + db_cert_path;
@@ -195,8 +197,8 @@ bool abe_crypto::import_db_cert(string db_cert_path){
     return true;
 }
 
-bool abe_crypto::import_kms_cert(string kms_cert_path){
-    string err_msg;
+bool abe_crypto::import_kms_cert(std::string kms_cert_path){
+    std::string err_msg;
     RSA *pk = import_pk(kms_cert_path, err_msg);
     if(pk == NULL){
         err_msg += ":" + kms_cert_path;
@@ -233,7 +235,7 @@ bool abe_crypto::verify_sig(RSA *pk, unsigned char * msg, size_t msg_length, uns
 
 }
 
-bool abe_crypto::verify_db_sig(const string msg, const string sig_b64){
+bool abe_crypto::verify_db_sig(const std::string msg, const std::string sig_b64){
     //sig是base64编码，需要先解码
     size_t sig_b64_length = sig_b64.length();
     unsigned char * sig = (unsigned char*)malloc(base64_utils::b64_dec_len(sig_b64_length));
@@ -249,7 +251,7 @@ bool abe_crypto::verify_db_sig(const string msg, const string sig_b64){
     return true;
 }
 
-bool abe_crypto::verify_kms_sig(const string msg_b64, const string sig_b64){
+bool abe_crypto::verify_kms_sig(const std::string msg_b64, const std::string sig_b64){
 
     //msg和sig都是base64编码，需要先解码
     size_t msg_b64_length = msg_b64.length();
@@ -274,7 +276,7 @@ bool abe_crypto::verify_kms_sig(const string msg_b64, const string sig_b64){
 }
 
 //注意ct初始化时必须指定长度，否则ct.length会因为0x00而截断
-bool abe_crypto::rsa_decrypt(const string ct, string &pt){
+bool abe_crypto::rsa_decrypt(const std::string ct, std::string &pt){
     int nLen = RSA_size(sk);
     char *pDecode = new char[nLen + 1];
     bool flag = true;
@@ -317,3 +319,6 @@ bool abe_crypto::rsa_decrypt(const string ct, string &pt){
     CRYPTO_cleanup_all_ex_data();
     return flag;
 }
+
+}//namespace mysqlx::abe
+}//namespace mysqlx

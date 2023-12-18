@@ -37,6 +37,7 @@ add_library(devapi STATIC
   result.cc
   document.cc
   crud.cc
+  abe_extern.cc
   ${HEADERS}
 )
 add_subdirectory(abe)

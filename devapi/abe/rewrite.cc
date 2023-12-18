@@ -3,7 +3,7 @@
 #include <iostream>
 #include <string>
 #include <algorithm>
-using std::string;
+// using std::std::string;
 
 
 /*因sql-parser库对mysql语句支持很不友好，且当前并未找到实用的sql解析库
@@ -14,8 +14,10 @@ using std::string;
 * 加密函数格式：abe_enc(<data>,<policy>)
 * 解密函数格式：abe_dec(<field name>)
 */
+namespace mysqlx{
+namespace abe{
 
-CommandType simple_parse(const string sql){
+CommandType simple_parse(const std::string sql){
     std::smatch result;
     for(auto it: PATTERNS_ALL.mp){
         if(std::regex_match(sql, result, it.second)){
@@ -26,10 +28,10 @@ CommandType simple_parse(const string sql){
 }
 
 
-bool rewrite_plan::insert_handler(string &real_sql, const string &raw_sql){
+bool rewrite_plan::insert_handler(std::string &real_sql, const std::string &raw_sql){
     std::regex pattern = PATTERNS_ALL.ABE_ENC_SQL_PATTERN;
     std::regex pattern_enc = PATTERNS_ALL.ABE_ENC_PATTERN;
-    string new_sql = raw_sql;
+    std::string new_sql = raw_sql;
     std::smatch result;
     while (std::regex_match(new_sql, result, pattern, std::regex_constants::format_first_only)){
         is_enc = true;//需要加密
@@ -38,7 +40,7 @@ bool rewrite_plan::insert_handler(string &real_sql, const string &raw_sql){
         temp.data = result[1];
         temp.policy = result[2];
 
-        string cipher;
+        std::string cipher;
         crypto->encrypt(temp.data, temp.policy, cipher);
         
         temp.enc_data = "'" + cipher + "'";
@@ -52,11 +54,11 @@ bool rewrite_plan::insert_handler(string &real_sql, const string &raw_sql){
     return true;
 }
 
-bool rewrite_plan::select_handler(string &real_sql, const string &raw_sql){
+bool rewrite_plan::select_handler(std::string &real_sql, const std::string &raw_sql){
     std::regex pattern = PATTERNS_ALL.ABE_DEC_SQL_PATTERN;
     std::regex pattern_dec = PATTERNS_ALL.ABE_DEC_PATTERN;
     std::smatch result;
-    string new_sql = raw_sql;
+    std::string new_sql = raw_sql;
     while (std::regex_match(new_sql, result, pattern, std::regex_constants::format_first_only)){
         is_dec = true;//需要解密
 
@@ -109,10 +111,13 @@ bool rewrite_plan::parse_and_rewrite(){
     return true;
 }
 
-std::vector<string> rewrite_plan::field_name_list() const {
-    std::vector<string> list;
+std::vector<std::string> rewrite_plan::get_field_name_list() const {
+    std::vector<std::string> list;
     for(auto item : dec_plan){
         list.push_back(item.field_name);
     }
     return list;
 }
+
+}//namespace mysqlx::abe
+}//namespace mysqlx

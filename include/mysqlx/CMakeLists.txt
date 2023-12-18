@@ -27,7 +27,7 @@
 # 51 Franklin St, Fifth Floor, Boston, MA 02110-1301  USA
 
 
-SET(headers common_constants.h common.h xapi.h xdevapi.h)
+SET(headers common_constants.h common.h xapi.h xdevapi.h abe_extern.h)
 
 check_headers(${headers})
 

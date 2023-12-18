@@ -1,6 +1,7 @@
 #ifndef SQL_ABE_BASE64_H
 #define SQL_ABE_BASE64_H
-
+namespace mysqlx{
+namespace abe{
 namespace base64_utils {
     static const char _base64[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 
@@ -141,4 +142,6 @@ namespace base64_utils {
     unsigned b64_dec_len(unsigned srclen);
 }
 
+}//namespace mysqlx::abe
+}//namespace mysqlx
 #endif // SEC_ABE_UTILS_H
