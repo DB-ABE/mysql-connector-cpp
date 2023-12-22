@@ -15,6 +15,7 @@
 * 解密函数格式：abe_dec(<field name>)
 */
 namespace mysqlx{
+MYSQLX_ABI_BEGIN(2,0)
 namespace abe{
 
 CommandType simple_parse(const std::string sql){
@@ -120,4 +121,5 @@ std::vector<std::string> rewrite_plan::get_field_name_list() const {
 }
 
 }//namespace mysqlx::abe
+MYSQLX_ABI_END(2,0)
 }//namespace mysqlx

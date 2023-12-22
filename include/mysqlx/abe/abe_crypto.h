@@ -7,8 +7,10 @@
 #include <openssl/err.h>
 #include <openssl/pem.h>
 #include "openssl/crypto.h"
+#include "../common/api.h"
 
 namespace mysqlx{
+MYSQLX_ABI_BEGIN(2,0)
 namespace abe{
 
 #define ABE_ERROR(msg) std::cerr << "error: " << (msg) << std::endl;
@@ -24,7 +26,7 @@ struct abe_user{
   std::string user_attr;
 };
 
-class abe_crypto{
+class PUBLIC_API abe_crypto{
 public:
 
     abe_crypto(){}
@@ -39,7 +41,7 @@ public:
     bool check_abe_key();   //true: abe_key已存在
 
     bool encrypt(std::string pt, std::string policy, std::string &ct);
-    bool decrypt(std::string ct, std::string &pt);
+    bool decrypt(const std::string ct, std::string &pt);
 
     bool import_db_cert(std::string db_cert_path);
     bool import_kms_cert(std::string kms_cert_path);
@@ -61,6 +63,7 @@ private:
 };
 
 }//namespace mysqlx::abe
+MYSQLX_ABI_END(2,0)
 }//namespace mysqlx
 
 #endif

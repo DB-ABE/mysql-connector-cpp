@@ -92,6 +92,10 @@ MYSQLX_ABI_BEGIN(2,0)
   namespace common {
   }
 
+  namespace abe {
+    
+  }
+
 MYSQLX_ABI_END(2,0)
 
 /*

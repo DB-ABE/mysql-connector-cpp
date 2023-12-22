@@ -8,9 +8,12 @@
 #include <unordered_map>
 #include <regex>
 #include "abe_crypto.h"
+#include "../common/api.h"
 
 
 namespace mysqlx{
+MYSQLX_ABI_BEGIN(2,0)
+
 namespace abe{
 enum CommandType{
     BEGIN,
@@ -142,5 +145,6 @@ private:
 };
 
 }//namespace mysqlx::abe
+MYSQLX_ABI_END(2,0)
 }//namespace mysqlx
 #endif

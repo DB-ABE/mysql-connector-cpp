@@ -7,17 +7,18 @@
 #include "xdevapi.h"
 // #include "devapi/detail/result.h"
 namespace mysqlx {
+MYSQLX_ABI_BEGIN(2,0)
 
 struct abe_parameters{
-    string rsa_sk_path; //rsa私钥路径,用于解密
-    string db_cert_path;  //db证书，用于验签
-    string kms_cert_path;   //kms证书，用于验签
+    std::string rsa_sk_path; //rsa私钥路径,用于解密
+    std::string db_cert_path;  //db证书，用于验签
+    std::string kms_cert_path;   //kms证书，用于验签
 
-    string abe_key_path;    //abe密钥路径
-    string abe_pp_path;     //abe公共参数路径，也可称mpk
+    std::string abe_key_path;    //abe密钥路径
+    std::string abe_pp_path;     //abe公共参数路径，也可称mpk
 };
 
-class abe_query : public abe::rewrite_plan{
+class PUBLIC_API abe_query : public abe::rewrite_plan{
 public:
     abe_query(Session * sess, abe::abe_crypto * abe, std::string sql): rewrite_plan(sql){
         this->sess = sess;
@@ -38,7 +39,7 @@ private:
     Session * sess;
 };
 
-class abe_env{
+class PUBLIC_API abe_env{
 public:
     abe_env(Session &sess){
         this->sess = &sess;
@@ -74,6 +75,8 @@ private:
 
 bool abe_encrypt(abe::abe_crypto &abe, std::string pt, std::string policy, std::string &ct );
 bool abe_decrypt(abe::abe_crypto &abe, std::string ct, std::string &pt);
+
+MYSQLX_ABI_END(2,0)
 }
 // const std::string abe_rewrite(const std::string &query, const abe_crypto &abe);
 #endif //ABE_EXTERN_H

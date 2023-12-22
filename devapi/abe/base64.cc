@@ -3,6 +3,7 @@
 #include <iostream>
 
 namespace mysqlx{
+MYSQLX_ABI_BEGIN(2,0)
 namespace abe{
 namespace base64_utils {
 
@@ -110,4 +111,6 @@ unsigned b64_dec_len(unsigned srclen)
 
 }
 }//namespace mysqlx::abe
+
+MYSQLX_ABI_END(2,0)
 }//namespace mysqlx

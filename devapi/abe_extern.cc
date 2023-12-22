@@ -7,6 +7,8 @@
 
 
 namespace mysqlx{
+MYSQLX_ABI_BEGIN(2,0)
+
 using rewrite_plan = mysqlx::abe::rewrite_plan;
 using abe_crypto = mysqlx::abe::abe_crypto;
 
@@ -39,9 +41,9 @@ RowResult abe_query::execute(){
 std::string abe_query::recover(const std::string &ct){
     std::string pt;
     if(!crypto->decrypt(ct, pt)){
-        return pt;
+        return "";
     }
-    return "";
+    return pt;
 }
 
 
@@ -87,7 +89,7 @@ std::string abe_env::get_current_user(){
     if(row_num != 1 || field_num != 1)  return "";
 
     auto it = res.begin();
-    auto str = (*it).get(1).get<string>();
+    auto str = (*it).get(0).get<string>();
     std::string namehost(str);
     return namehost;
 }
@@ -101,7 +103,7 @@ std::string abe_env::get_current_user_abe_attribute(){
     if(row_num != 1 || field_num != 1)  return "";
 
     auto it = res.begin();
-    auto str = (*it).get(1).get<string>();
+    auto str = (*it).get(0).get<string>();
     std::string att(str);
     return att;
 }
@@ -157,4 +159,5 @@ bool abe_decrypt(abe_crypto &abe, std::string ct, std::string &pt){
     return true;
 }
 
+MYSQLX_ABI_END(2,0)
 }//namespace mysqlx

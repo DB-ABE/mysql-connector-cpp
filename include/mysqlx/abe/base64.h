@@ -1,6 +1,9 @@
 #ifndef SQL_ABE_BASE64_H
 #define SQL_ABE_BASE64_H
+#include "../common/api.h"
 namespace mysqlx{
+MYSQLX_ABI_BEGIN(2,0)
+
 namespace abe{
 namespace base64_utils {
     static const char _base64[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
@@ -143,5 +146,7 @@ namespace base64_utils {
 }
 
 }//namespace mysqlx::abe
+
+MYSQLX_ABI_END(2,0)
 }//namespace mysqlx
 #endif // SEC_ABE_UTILS_H

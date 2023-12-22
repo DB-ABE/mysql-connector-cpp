@@ -13,6 +13,7 @@
 #include "mysqlx/abe/base64.h"
 
 namespace mysqlx{
+MYSQLX_ABI_BEGIN(2,0)
 namespace abe{
 
 bool abe_crypto::encrypt(std::string pt, std::string policy, std::string &ct){
@@ -27,7 +28,7 @@ bool abe_crypto::encrypt(std::string pt, std::string policy, std::string &ct){
   return true;
 }
 
-bool abe_crypto::decrypt(std::string ct, std::string &pt){
+bool abe_crypto::decrypt(const std::string ct, std::string &pt){
   
   if(!check_abe_key()){
     return false;
@@ -321,4 +322,6 @@ bool abe_crypto::rsa_decrypt(const std::string ct, std::string &pt){
 }
 
 }//namespace mysqlx::abe
+
+MYSQLX_ABI_END(2,0)
 }//namespace mysqlx
