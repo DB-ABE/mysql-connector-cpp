@@ -62,7 +62,12 @@ public:
         return abe.check_abe_key();
     }
 
-private:
+    /*
+    init时如果存在abe_key则不重复下载，使用update_abe_key可以强制更新abe_key
+    */
+    bool update_abe_key(std::string abe_key_path);
+
+
     Session * sess;
     abe::abe_crypto abe;
 

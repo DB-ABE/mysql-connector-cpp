@@ -5,6 +5,12 @@
 #include "mysqlx/abe/abe_crypto.h"
 #include "mysqlx/xdevapi.h"
 
+#define SQL_CURRENT_USER_KEY_PRIFIX \
+    "select owner,encrypted_key,sig_db,sig_db_type,sig_kms,sig_kms_type \
+    from mysql.abe_user_key where owner = '"
+#define SQL_CURRENT_USER_KEY_SUFFIX "'"
+#define SQL_CURRENT_USER_ATT "select current_abe_attribute()"
+#define SQL_CURRENT_USER "select current_user()"
 
 namespace mysqlx{
 MYSQLX_ABI_BEGIN(2,0)
@@ -48,13 +54,14 @@ std::string abe_query::recover(const std::string &ct){
 
 
 std::string abe_env::get_current_user_key(){
-    std::string str = "select owner,encrypted_key,sig_db,sig_db_type,sig_kms,sig_kms_type from mysql.abe_user_key";
-    str += " where owner = '" + abe.user.user_id + "';";
+    std::string str = std::string(SQL_CURRENT_USER_KEY_PRIFIX);
+    str += abe.user.user_id;
+    str += std::string(SQL_CURRENT_USER_KEY_SUFFIX);
 
     RowResult res = sess->sql(str).execute();
 
-    int field_num = res.count();
-    int row_num = res.getColumnCount();
+    int row_num = res.count();
+    int field_num = res.getColumnCount();
     if(row_num != 1){
         ABE_LOG("It seems that you don't have the abe key, please contact the admininistrator");
     }
@@ -82,7 +89,7 @@ std::string abe_env::get_current_user_key(){
 
 std::string abe_env::get_current_user(){
 
-    RowResult res = sess->sql("select current_user()").execute();
+    RowResult res = sess->sql(SQL_CURRENT_USER).execute();
 
     int field_num = res.count();
     int row_num = res.getColumnCount();
@@ -96,7 +103,7 @@ std::string abe_env::get_current_user(){
 
 std::string abe_env::get_current_user_abe_attribute(){
 
-    RowResult res = sess->sql("select current_abe_attribute()").execute();
+    RowResult res = sess->sql(SQL_CURRENT_USER_ATT).execute();
 
     int field_num = res.count();
     int row_num = res.getColumnCount();
@@ -126,16 +133,18 @@ bool abe_env::abe_prepare_queries(const abe_parameters &params){
     }
 
     if(!check_abe_key()){
-        std::string abe_key = get_current_user_key();
-        if(abe_key == ""){
-            return false;
-        }else{
-            //todo:存储abe_key的逻辑
-            abe.save_user_key(params.abe_key_path, abe_key);
-        }
+        update_abe_key(params.abe_key_path);
     }
     return true;
 
+}
+
+bool abe_env::update_abe_key(std::string abe_key_path){
+    std::string abe_key = get_current_user_key();
+    if(abe_key == ""){
+        return false;
+    }
+    return abe.save_user_key(abe_key_path, abe_key);
 }
 
 bool abe_env::init(const abe_parameters &params){

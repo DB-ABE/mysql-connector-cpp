@@ -112,8 +112,6 @@ bool abe_crypto::save_user_key(std::string key_path, std::string key_str_b64){
     free(key_str);
 
     if(pt == ""){
-        //todo: 后续可以考虑增加一个参数决定每次启动是否更新abe_key
-        //或者提供一个函数让程序员自行决定是否更新
         return false;
     }
     //写入abe_user_key
