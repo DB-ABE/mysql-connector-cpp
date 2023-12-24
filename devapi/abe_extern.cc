@@ -45,127 +45,127 @@ RowResult abe_query::execute(){
 }
 
 std::string abe_query::recover(const std::string &ct){
-    std::string pt;
-    if(!crypto->decrypt(ct, pt)){
-        return "";
+    try{
+        std::string pt;
+        crypto->decrypt(ct, pt);
+        return pt;
     }
-    return pt;
+    CATCH_AND_WRAP
 }
 
 
 std::string abe_env::get_current_user_key(){
-    std::string str = std::string(SQL_CURRENT_USER_KEY_PRIFIX);
-    str += abe.user.user_id;
-    str += std::string(SQL_CURRENT_USER_KEY_SUFFIX);
+    try{
+        std::string str = std::string(SQL_CURRENT_USER_KEY_PRIFIX);
+        str += abe.user.user_id;
+        str += std::string(SQL_CURRENT_USER_KEY_SUFFIX);
 
-    RowResult res = sess->sql(str).execute();
+        RowResult res = sess->sql(str).execute();
 
-    int row_num = res.count();
-    int field_num = res.getColumnCount();
-    if(row_num != 1){
-        ABE_LOG("It seems that you don't have the abe key, please contact the admininistrator");
+        int row_num = res.count();
+        int field_num = res.getColumnCount();
+        if(row_num != 1){
+            throw_error("It seems that you don't have the abe key, please contact the admininistrator.");
+        }
+        if(field_num != rewrite_plan::TABLE_ABE_UER_KEY_FIELD_NUM){
+            throw_error("system table 'abe_user_key' error");
+        }
+
+        auto it = res.begin();
+        std::string key_str = (*it).get(rewrite_plan::F_KEY_NUM).get<string>();
+        std::string sig_db = (*it).get(rewrite_plan::F_SIG_DB_NUM).get<string>();
+        std::string sig_db_type = (*it).get(rewrite_plan::F_SIG_DB_TYPE_NUM).get<string>();
+        std::string sig_kms = (*it).get(rewrite_plan::F_SIG_KMS_NUM).get<string>();
+        std::string sig_kms_type = (*it).get(rewrite_plan::F_SIG_KMS_TYPE_NUM).get<string>();
+
+        std::string namehost = abe.user.user_id;
+        std::string attrlist = abe.user.user_attr;
+        abe.verify_db_sig(namehost + attrlist,sig_db);
+        abe.verify_kms_sig(key_str,sig_kms);
+        return key_str;
     }
-    if(field_num != rewrite_plan::TABLE_ABE_UER_KEY_FIELD_NUM){
-        ABE_ERROR("system table 'abe_user_key' error");
-        return "";
-    }
-
-    auto it = res.begin();
-    std::string key_str = (*it).get(rewrite_plan::F_KEY_NUM).get<string>();
-    std::string sig_db = (*it).get(rewrite_plan::F_SIG_DB_NUM).get<string>();
-    std::string sig_db_type = (*it).get(rewrite_plan::F_SIG_DB_TYPE_NUM).get<string>();
-    std::string sig_kms = (*it).get(rewrite_plan::F_SIG_KMS_NUM).get<string>();
-    std::string sig_kms_type = (*it).get(rewrite_plan::F_SIG_KMS_TYPE_NUM).get<string>();
-
-    std::string namehost = abe.user.user_id;
-    std::string attrlist = abe.user.user_attr;
-    if(!(abe.verify_db_sig(namehost + attrlist,sig_db) 
-        && abe.verify_kms_sig(key_str,sig_kms))){
-            return "";
-    }
-    return key_str;
-
+    CATCH_AND_WRAP
 }
 
 std::string abe_env::get_current_user(){
+    try{
+        RowResult res = sess->sql(SQL_CURRENT_USER).execute();
 
-    RowResult res = sess->sql(SQL_CURRENT_USER).execute();
+        int field_num = res.count();
+        int row_num = res.getColumnCount();
+        if(row_num != 1 || field_num != 1){
+            throw_error("abe query failed: get current user.");
+        }
 
-    int field_num = res.count();
-    int row_num = res.getColumnCount();
-    if(row_num != 1 || field_num != 1)  return "";
-
-    auto it = res.begin();
-    auto str = (*it).get(0).get<string>();
-    std::string namehost(str);
-    return namehost;
+        auto it = res.begin();
+        auto str = (*it).get(0).get<string>();
+        std::string namehost(str);
+        return namehost;
+    }
+    CATCH_AND_WRAP
 }
 
 std::string abe_env::get_current_user_abe_attribute(){
+    try{
+        RowResult res = sess->sql(SQL_CURRENT_USER_ATT).execute();
 
-    RowResult res = sess->sql(SQL_CURRENT_USER_ATT).execute();
+        int field_num = res.count();
+        int row_num = res.getColumnCount();
+        if(row_num != 1 || field_num != 1){
+            throw_error("abe query failed: get current user abe attribute.");
+        }
 
-    int field_num = res.count();
-    int row_num = res.getColumnCount();
-    if(row_num != 1 || field_num != 1)  return "";
-
-    auto it = res.begin();
-    auto str = (*it).get(0).get<string>();
-    std::string att(str);
-    return att;
+        auto it = res.begin();
+        auto str = (*it).get(0).get<string>();
+        std::string att(str);
+        return att;
+    }
+    CATCH_AND_WRAP
 }
 
-bool abe_env::abe_prepare_queries(const abe_parameters &params){
-    std::string namehost = get_current_user();
-    if(namehost == ""){
-        // ABE_ERROR("can't get your username and host!");
-        return false;
-    }else{
+void abe_env::abe_prepare_queries(const abe_parameters &params){
+    try{
+        std::string namehost = get_current_user();
         abe.set_name(namehost);
-        
-    }
-    std::string attrlist = get_current_user_abe_attribute();
-    if(attrlist == ""){
-        // ABE_ERROR("can't get your attrlist, please contact adminastrator.");
-        return false;
-    }else{
+        std::string attrlist = get_current_user_abe_attribute();
         abe.set_att(attrlist);
+        if(!check_abe_key()){
+            update_abe_key(params.abe_key_path);
+        }
     }
-
-    if(!check_abe_key()){
-        update_abe_key(params.abe_key_path);
-    }
-    return true;
-
+    CATCH_AND_WRAP
 }
 
-bool abe_env::update_abe_key(std::string abe_key_path){
-    std::string abe_key = get_current_user_key();
-    if(abe_key == ""){
-        return false;
+void abe_env::update_abe_key(std::string abe_key_path){
+    try{
+        std::string abe_key = get_current_user_key();
+        abe.save_user_key(abe_key_path, abe_key);
     }
-    return abe.save_user_key(abe_key_path, abe_key);
+    CATCH_AND_WRAP
 }
 
-bool abe_env::init(const abe_parameters &params){
-    if(!abe.init(params.abe_pp_path, params.abe_key_path, 
+void abe_env::init(const abe_parameters &params){
+    try{
+        abe.init(params.abe_pp_path, params.abe_key_path, 
                     params.kms_cert_path, params.db_cert_path,
-                    params.rsa_sk_path)
-        || abe_prepare_queries(params)){
-        // ABE_ERROR("failed to init abe system");
-        return false;
+                    params.rsa_sk_path);
+        abe_prepare_queries(params);
     }
-    return false;
+    CATCH_AND_WRAP
 }
 
-bool abe_encrypt(abe_crypto &abe, std::string pt, std::string policy, std::string &ct ){
-    abe.encrypt(pt, policy, ct);
-    return true;
+void abe_encrypt(abe_crypto &abe, std::string pt, std::string policy, std::string &ct ){
+    try{
+        abe.encrypt(pt, policy, ct);
+    }
+    CATCH_AND_WRAP
 }
 
-bool abe_decrypt(abe_crypto &abe, std::string ct, std::string &pt){
-    abe.decrypt(ct, pt);
-    return true;
+void abe_decrypt(abe_crypto &abe, std::string ct, std::string &pt){
+    try{
+        abe.decrypt(ct, pt);
+    }
+    CATCH_AND_WRAP
 }
 
 MYSQLX_ABI_END(2,0)

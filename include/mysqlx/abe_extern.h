@@ -48,7 +48,7 @@ public:
     /*
         初始化abe的环境，包括所需abe密钥和证书、私钥等
     */
-    bool init(const abe_parameters &params);
+    void init(const abe_parameters &params);
 
     /*
         仿照原来的用法
@@ -65,21 +65,21 @@ public:
     /*
     init时如果存在abe_key则不重复下载，使用update_abe_key可以强制更新abe_key
     */
-    bool update_abe_key(std::string abe_key_path);
+    void update_abe_key(std::string abe_key_path);
 
 
     Session * sess;
     abe::abe_crypto abe;
 
-    bool abe_prepare_queries(const abe_parameters &params);
+    void abe_prepare_queries(const abe_parameters &params);
     std::string get_current_user();
     std::string get_current_user_abe_attribute();
     std::string get_current_user_key();
 };
 
 
-bool abe_encrypt(abe::abe_crypto &abe, std::string pt, std::string policy, std::string &ct );
-bool abe_decrypt(abe::abe_crypto &abe, std::string ct, std::string &pt);
+void abe_encrypt(abe::abe_crypto &abe, std::string pt, std::string policy, std::string &ct );
+void abe_decrypt(abe::abe_crypto &abe, std::string ct, std::string &pt);
 
 MYSQLX_ABI_END(2,0)
 }
