@@ -19,29 +19,32 @@ using rewrite_plan = mysqlx::abe::rewrite_plan;
 using abe_crypto = mysqlx::abe::abe_crypto;
 
 RowResult abe_query::execute(){
-    parse_and_rewrite();
+    try{
+        parse_and_rewrite();
 
-    field_name_list = get_field_name_list();
+        field_name_list = get_field_name_list();
 
-    RowResult res = sess->sql(real_sql).execute();
+        RowResult res = sess->sql(real_sql).execute();
 
-    auto it = res.getColumns().begin();
-    auto end = res.getColumns().end();
-    unsigned int i=0;
-    for (;it != end;++it){
-        std::string field_name = (*it).getColumnName();
-        auto temp = std::find(field_name_list.begin(), field_name_list.end(), field_name);
-        if(temp != field_name_list.end()){
-            //该列是使用了abe_dec的列
-            f_flag.push_back(1);
-            field_num_list.push_back(i);
-        }else{
-            //普通列
-            f_flag.push_back(0);
+        auto it = res.getColumns().begin();
+        auto end = res.getColumns().end();
+        unsigned int i=0;
+        for (;it != end;++it){
+            std::string field_name = (*it).getColumnName();
+            auto temp = std::find(field_name_list.begin(), field_name_list.end(), field_name);
+            if(temp != field_name_list.end()){
+                //该列是使用了abe_dec的列
+                f_flag.push_back(1);
+                field_num_list.push_back(i);
+            }else{
+                //普通列
+                f_flag.push_back(0);
+            }
+            i++;
         }
-        i++;
+        return res;
     }
-    return res;
+    CATCH_AND_WRAP
 }
 
 std::string abe_query::recover(const std::string &ct){
