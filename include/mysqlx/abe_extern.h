@@ -58,6 +58,9 @@ public:
         return abe_query(sess, &abe, input);
     }
 
+    //解密
+    std::string recover(const std::string &ct);
+
     bool check_abe_key(){
         return abe.check_abe_key();
     }

@@ -56,6 +56,14 @@ std::string abe_query::recover(const std::string &ct){
     CATCH_AND_WRAP
 }
 
+std::string abe_env::recover(const std::string &ct){
+    try{
+        std::string pt;
+        abe.decrypt(ct, pt);
+        return pt;
+    }
+    CATCH_AND_WRAP
+}
 
 std::string abe_env::get_current_user_key(){
     try{
