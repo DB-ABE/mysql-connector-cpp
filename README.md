@@ -1,137 +1,132 @@
 # MySQL Connector/C++
 
-This is a release of MySQL Connector/C++, [the C++ interface](https://dev.mysql.com/doc/dev/connector-cpp/8.0/) for communicating with MySQL servers.
+## ABE支持
 
-For detailed information please visit the official [MySQL Connector/C++ documentation](https://dev.mysql.com/doc/dev/connector-cpp/8.0/).
+### 使用
 
-## Licensing
+要使用ABE功能，需引用abe_extern.h头文件。
 
-Please refer to files README and LICENSE, available in this repository, and [Legal Notices in documentation](https://dev.mysql.com/doc/connector-cpp/8.0/en/preface.html) for further details. 
+开放接口和使用方法可参考如下示例：
 
-## Download & Install
-
-MySQL Connector/C++ can be installed from pre-compiled packages that can be downloaded from the [MySQL downloads page](https://dev.mysql.com/downloads/connector/cpp/).
-The process of installing of Connector/C++ from a binary distribution is described in [MySQL online manuals](https://dev.mysql.com/doc/connector-cpp/8.0/en/connector-cpp-installation-binary.html)
-
-### Building from sources
-
-MySQL Connector/C++ can be installed from the source. Please check [MySQL online manuals](https://dev.mysql.com/doc/connector-cpp/8.0/en/connector-cpp-installation-source.html)
-
-### GitHub Repository
-
-This repository contains the MySQL Connector/C++ source code as per latest released version. You should expect to see the same contents here and within the latest released Connector/C++ package.
-
-## Sample Code
-
-```
+```cpp
 #include <iostream>
-#include <mysqlx/xdevapi.h>
+#include <vector>
+#include<mysqlx/xdevapi.h>
+#include<mysqlx/xapi.h>
+#include<mysqlx/abe_extern.h>
+using namespace mysqlx;
+using std::cout;
+using std::endl;
+using std::vector;
 
-using ::std::cout;
-using ::std::endl;
-using namespace ::mysqlx;
+//数据库连接
+Session get_connect(){
+    //注意 mysqlcppconn8 默认使用的端口：33060，若连接3306端口会提示错误
+    //使用用户名：testabe
+    //用户 root 的密码是：123456
+    //主机：172.17.0.9
+    //端口：33060
+    //数据库：company
+    cout << "start connecting...\n";
 
+    SessionSettings option("172.17.0.9", 33060, "testabe", "123456");
+    Session sess(option); 
+    
+    cout <<"Done!" <<endl;
+    cout <<"Session accepted, creating collection..." <<endl;
 
-int main(int argc, const char* argv[])
-try {
+    sess.sql("use company").execute();  //使用数据库 webserver
+    return sess;
+}
 
-  const char   *url = (argc > 1 ? argv[1] : "mysqlx://root@127.0.0.1");
-
-  cout << "Creating session on " << url
-       << " ..." << endl;
-
-  Session sess(url);
-
-  cout <<"Session accepted, creating collection..." <<endl;
-
-  Schema sch= sess.getSchema("test");
-  Collection coll= sch.createCollection("c1", true);
-
-  cout <<"Inserting documents..." <<endl;
-
-  coll.remove("true").execute();
-
-  {
-    DbDoc doc(R"({ "name": "foo", "age": 1 })");
-
-    Result add =
-      coll.add(doc)
-          .add(R"({ "name": "bar", "age": 2, "toys": [ "car", "ball" ] })")
-          .add(R"({ "name": "bar", "age": 2, "toys": [ "car", "ball" ] })")
-          .add(R"({
-                 "name": "baz",
-                  "age": 3,
-                 "date": { "day": 20, "month": "Apr" }
-              })")
-          .add(R"({ "_id": "myuuid-1", "name": "foo", "age": 7 })")
-          .execute();
-
-    std::list<string> ids = add.getGeneratedIds();
-    for (string id : ids)
-      cout <<"- added doc with id: " << id <<endl;
-  }
-
-  cout <<"Fetching documents..." <<endl;
-
-  DocResult docs = coll.find("age > 1 and name like 'ba%'").execute();
-
-  int i = 0;
-  for (DbDoc doc : docs)
-  {
-    cout <<"doc#" <<i++ <<": " <<doc <<endl;
-
-    for (Field fld : doc)
-    {
-      cout << " field `" << fld << "`: " <<doc[fld] << endl;
+//正常用法
+void normal_example(Session &sess){
+    cout << "normal query begin:" << endl;
+    RowResult rs = sess.sql("select * from note").execute();
+    for (auto it = rs.begin();it != rs.end();++it){
+        cout << (*it).get(0).get<int>() <<" ";
+        cout << (*it).get(1).get<string>(); //这个string是mysqlx的string，继承自std::u16string
+        cout << endl;
     }
+    cout << "normal query end." << endl;
+}
+void abe_example1(Session &sess) {
+    /*
+    *   1. 初始化abe环境
+    *       - 利用abe_parameters设置abe所需的参数
+    *       - 传入Session，创建abe_env对象
+    *       - 传入abe_parameters参数，初始化abe_env对象。 这一过程
+    *         将会导入abe模块所需的abe密钥、RSA密钥（db/kms公钥，用户私钥）
+    *         等信息。之后，将会执行预查询，包括获取用户名称、属性列表，如果
+    *         之前没有导入abe用户密钥，还会通过预查询获取用户密钥，该密钥将
+    *         经过验签、解密后存储到指定位置
+    *       
+    */
+    abe_parameters params;
+    params.abe_key_path = "/root/connector_demo/data/abe/abe_key";
+    params.abe_pp_path = "/root/connector_demo/data/abe/abe_pp";
+    params.db_cert_path = "/root/connector_demo/data/certs/dbcert.pem";
+    params.kms_cert_path = "/root/connector_demo/data/certs/kmscert.pem";
+    params.rsa_sk_path = "/root/connector_demo/data/prikey/testabe@%.pem";
 
-    string name = doc["name"];
-    cout << " name: " << name << endl;
+    abe_env env(sess);
+    env.init(params);
 
-    if (doc.hasField("date") && Value::DOCUMENT == doc.fieldType("date"))
-    {
-      cout << "- date field" << endl;
-      DbDoc date = doc["date"];
-      for (Field fld : date)
-      {
-        cout << "  date `" << fld << "`: " << date[fld] << endl;
-      }
-      string month = doc["date"]["month"];
-      int day = date["day"];
-      cout << "  month: " << month << endl;
-      cout << "  day: " << day << endl;
+    cout << "abe query begin:" << endl;
+    /*
+    *   2. 执行abe查询，
+    *       - 查询执行的格式为：env.sql("sql query statement").execute();
+    *         其中env.sql函数将会返回一个abe_query类型的对象，该对象存储了sql语句
+    *         改写相关信息，改写和执行发生在abe_query类的execute方法。
+    *       - 加密sql示例：
+    *           insert into share2 values (2, abe_enc("hello,hello","attr1 and attr2"));
+    *         其中，abe_enc为加密“函数”，第一个参数为原始明文，第二个参数为用户设置的abe访问策略
+    *       - 解密sql示例：
+    *           select id,title,abe_dec(data) from share;、
+    *         其中abe_dec为解密“函数”，参数为要解密的列名
+    *       - 恢复明文
+    *           查询得到的为密文，使用recover方法恢复明文，需要注意所有abe相关实现都是基于std::string
+    *           所以在获取密文时需要使用get<std::string>()
+    */
+    abe_query query = env.sql("select id,title,abe_dec(data) from share;");
+    RowResult rs2 = query.execute();
+    // cout << "real_sql = " << query.real_sql << endl;
+    for (auto it = rs2.begin();it != rs2.end();++it){
+        cout << (*it).get(0).get<int>() << "\t";
+        cout << (*it).get(1).get<mysqlx::abi2::r0::string>() << "\t";
+        auto ustr = (*it).get(2).get<std::string>();
+        try{
+            cout << env.recover(ustr);
+        }catch(const Error &e){
+            cout << "can't decrypt";
+        }
+        cout << endl;
     }
-
-    if (doc.hasField("toys") && Value::ARRAY == doc.fieldType("toys"))
-    {
-      cout << "- toys:" << endl;
-      for (auto toy : doc["toys"])
-      {
-        cout << "  " << toy << endl;
-      }
+    cout << "abe query end." << endl;
+ 
+}
+int main()
+{
+    try{
+        Session sess = get_connect();
+        normal_example(sess);
+        abe_example1(sess);
+    
+    } catch (const Error& e) {
+        cout << e.what() <<endl;
     }
-
-    cout << endl;
-  }
-  cout <<"Done!" <<endl;
+    return 0;
 }
-catch (const mysqlx::Error &err)
-{
-  cout <<"ERROR: " <<err <<endl;
-  return 1;
-}
-catch (std::exception &ex)
-{
-  cout <<"STD EXCEPTION: " <<ex.what() <<endl;
-  return 1;
-}
-catch (const char *ex)
-{
-  cout <<"EXCEPTION: " <<ex <<endl;
-  return 1;
-}
-
 ```
+
+### 编译
+
+本部分基于8.0.27分支开发，编译安装方式和8.0.27一致。
+
+ABE相关头文件位于include/mysqlx目录下，相关cpp文件位于devapi目录下。
+
+暂时使用的ABE加密库为openabe，需在文件devapi/abe/CMakeLists.txt中指定openabe等依赖的搜索路径。
+
 
 ## Documentation
 
