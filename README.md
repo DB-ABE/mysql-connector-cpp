@@ -108,9 +108,11 @@ void abe_example1(Session &sess) {
 int main()
 {
     try{
+        initialize_abe();
         Session sess = get_connect();
         normal_example(sess);
         abe_example1(sess);
+        shutdown_abe();
     
     } catch (const Error& e) {
         cout << e.what() <<endl;
