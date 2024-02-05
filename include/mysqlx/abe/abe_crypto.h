@@ -90,6 +90,9 @@ private:
     RSA * import_pk(const std::string cert_path, std::string &err_msg);
 };
 
+void PUBLIC_API _initialize_abe();
+void PUBLIC_API _shutdown_abe();
+
 }//namespace mysqlx::abe
 MYSQLX_ABI_END(2,0)
 }//namespace mysqlx

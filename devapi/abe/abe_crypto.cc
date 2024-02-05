@@ -4,6 +4,7 @@
 #include <unistd.h>
 #include <openabe/openabe.h>
 #include <openabe/zsymcrypto.h>
+#include <mutex>
 #include <openssl/sha.h>
 #include <openssl/rsa.h>
 #include <openssl/err.h>
@@ -17,12 +18,12 @@ MYSQLX_ABI_BEGIN(2,0)
 namespace abe{
 
 void abe_crypto::encrypt(std::string pt, std::string policy, std::string &ct){
-  
-  oabe::InitializeOpenABE();
+  oabe::OpenABEStateContext thread_context;
+  thread_context.initializeThread();
   oabe::OpenABECryptoContext cpabe("CP-ABE");
   cpabe.importPublicParams(mpk);
   cpabe.encrypt(policy.c_str(), pt, ct);
-  oabe::ShutdownOpenABE();
+  thread_context.shutdownThread();
 }
 
 void abe_crypto::decrypt(const std::string ct, std::string &pt){
@@ -31,15 +32,16 @@ void abe_crypto::decrypt(const std::string ct, std::string &pt){
     ABE_ERROR("no abe key!");
   }
 
-  oabe::InitializeOpenABE();
+  oabe::OpenABEStateContext thread_context;
+  thread_context.initializeThread();
   oabe::OpenABECryptoContext cpabe("CP-ABE");
   cpabe.importPublicParams(mpk);
   cpabe.importUserKey(user.user_id.c_str(), user.user_key);
   if(!cpabe.decrypt(user.user_id.c_str(), ct, pt)){
-    oabe::ShutdownOpenABE();
+    thread_context.shutdownThread();
     ABE_ERROR("abe: can't decrypt.");
   }
-  oabe::ShutdownOpenABE();
+  thread_context.shutdownThread();
 }
 
 bool abe_crypto::check_abe_key(){
@@ -296,6 +298,15 @@ bool abe_crypto::rsa_decrypt(const std::string ct, std::string &pt){
     CRYPTO_cleanup_all_ex_data();
     return flag;
 }
+
+void _initialize_abe(){
+    oabe::InitializeOpenABE();
+}
+
+void _shutdown_abe(){
+    oabe::ShutdownOpenABE();
+}
+
 
 }//namespace mysqlx::abe
 

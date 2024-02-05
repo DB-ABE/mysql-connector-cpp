@@ -81,8 +81,15 @@ public:
 };
 
 
-void abe_encrypt(abe::abe_crypto &abe, std::string pt, std::string policy, std::string &ct );
-void abe_decrypt(abe::abe_crypto &abe, std::string ct, std::string &pt);
+void PUBLIC_API abe_encrypt(abe::abe_crypto &abe, std::string pt, std::string policy, std::string &ct );
+void PUBLIC_API abe_decrypt(abe::abe_crypto &abe, std::string ct, std::string &pt);
+
+void PUBLIC_API initialize_abe(){
+    abe::_initialize_abe();
+}
+void PUBLIC_API shutdown_abe(){
+    abe::_shutdown_abe();
+}
 
 MYSQLX_ABI_END(2,0)
 }
